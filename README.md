@@ -2,6 +2,27 @@
 
 # Bluejay
 
+> [!CAUTION]
+> This branch contains an **unvalidated private OMP ESC port**. It is based on
+> upstream Bluejay v0.21.0, but it must not be used on flight hardware until the
+> electrical checks in the porting guide have passed.
+
+## OMP EFM8BB21 + FD6288 custom port
+
+This repository adds layout `X` for an EFM8BB21F16G-QFN20 ESC using an FD6288
+three-phase gate driver. The conservative first-test image is
+`X_H_5_24_v0.21.0-omp1.hex` (`DEADTIME=5`, about 102 ns of MCU-side
+non-overlap on BB21, and 24 kHz PWM).
+
+- [Chinese porting, Arduino Nano C2 backup/flashing, and validation guide](OMP_ESC_PORTING_GUIDE_zh-CN.md)
+- [Private test release and prebuilt HEX](https://github.com/hjgt/bluejay_on_omp_esc/releases/tag/v0.21.0-omp1)
+- Build: `make omp VERSION=v0.21.0-omp1`
+- Verify: `python3 tools/verify_efm8_hex.py build/hex/X_H_5_24_v0.21.0-omp1.hex`
+
+Known hardware gates still requiring measurement are the P1.3 half-bus
+reference, the candidate P0.5 DShot input, and the FD6288 channel-to-motor-phase
+pairing. Layout `X` rejects `DEADTIME=0` at assembly time.
+
 [![GitHub release (latest by date)](https://img.shields.io/github/downloads/bird-sanctuary/bluejay/latest/total?style=for-the-badge)](https://github.com/bird-sanctuary/bluejay/releases/latest)
 [![Discord](https://img.shields.io/discord/822952715944460368?color=7289da&label=Discord&logo=discord&logoColor=white&style=for-the-badge)](https://discord.gg/ddyzguPB5t)
 

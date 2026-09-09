@@ -11,6 +11,44 @@ MCUS_X		= X
 DEADTIMES		= 0 5 10 15 20 25 30 40 50 70 90 120
 PWM_FREQS		= 24 48 96
 
+# Custom OMP ESC target. The FD6288 needs complementary HIN/LIN PWM, so the
+# DEADTIME=0 targets used by some discrete-driver layouts are deliberately not
+# generated for this board.
+OMP_LAYOUTS		= X
+OMP_MCUS		= H
+OMP_DEADTIMES	= $(filter-out 0,$(DEADTIMES))
+
+# Layout numbers encoded in the firmware tag. Keep these in sync with the
+# layout enumerations in src/Bluejay.asm. Using make variables here avoids
+# launching several shell processes for every generated target rule.
+ESCNO_A := 1
+ESCNO_B := 2
+ESCNO_C := 3
+ESCNO_D := 4
+ESCNO_E := 5
+ESCNO_F := 6
+ESCNO_G := 7
+ESCNO_H := 8
+ESCNO_I := 9
+ESCNO_J := 10
+ESCNO_K := 11
+ESCNO_L := 12
+ESCNO_M := 13
+ESCNO_N := 14
+ESCNO_O := 15
+ESCNO_P := 16
+ESCNO_Q := 17
+ESCNO_R := 18
+ESCNO_S := 19
+ESCNO_T := 20
+ESCNO_U := 21
+ESCNO_V := 22
+ESCNO_W := 23
+ESCNO_X := 24
+ESCNO_Y := 25
+ESCNO_Z := 26
+ESCNO_OA := 27
+
 # Example single target
 LAYOUT		?= A
 MCU			?= H
@@ -42,6 +80,7 @@ ASM_SRC		= src/Bluejay.asm
 
 ASM_INC		= 								\
 			$(LAYOUTS:%=src/Layouts/%.inc)	\
+			$(OMP_LAYOUTS:%=src/Layouts/%.inc) \
 			src/Layouts/Base.inc			\
 			src/BLHeliBootLoad.inc			\
 			src/Silabs/SI_EFM8BB1_Defs.inc	\
@@ -81,10 +120,8 @@ define MAKE_OBJ
 OBJS += $(1)_$(2)_$(3)_$(4)_$(VERSION).OBJ
 $(OUTPUT_DIR)/$(1)_$(2)_$(3)_$(4)_$(VERSION).OBJ : $(ASM_SRC) $(ASM_INC)
 	$(eval _ESC			:= $(1))
-	$(eval _ESC_INT		:= $(shell printf "%d" "'${_ESC}"))
-	$(eval _ESCNO		:= $(shell echo $$(( $(_ESC_INT) - 65 + 1))))
-
-	$(if $(shell if [ ${_ESC} = "OA" ]; then echo "TRUE"; fi),$(eval _ESCNO := '27'),)
+	$(eval _ESCNO		:= $(ESCNO_$(1)))
+	$(if $(_ESCNO),,$(error Unknown layout identifier: $(1)))
 
 	$(eval _MCU_TYPE	:= $(subst L,0,$(subst H,1,$(subst X,2,$(2)))))
 	$(eval _DEADTIME	:= $(3))
@@ -103,6 +140,7 @@ $(OUTPUT_DIR)/$(1)_$(2)_$(3)_$(4)_$(VERSION).OBJ : $(ASM_SRC) $(ASM_INC)
 endef
 
 SINGLE_TARGET_HEX = $(HEX_DIR)/$(LAYOUT)_$(MCU)_$(DEADTIME)_$(PWM)_$(VERSION).hex
+OMP_TARGET_HEX = $(HEX_DIR)/X_H_5_24_$(VERSION).hex
 
 single_target : $(SINGLE_TARGET_HEX)
 
@@ -119,10 +157,19 @@ $(foreach _l, $(LAYOUTS_X), \
 			$(foreach _p, $(filter-out $(subst L,96,$(_m)), $(PWM_FREQS)), \
 				$(eval $(call MAKE_OBJ,$(_l),$(_m),$(_d),$(_p)))))))
 
+$(foreach _l, $(OMP_LAYOUTS), \
+	$(foreach _m, $(OMP_MCUS), \
+		$(foreach _d, $(OMP_DEADTIMES), \
+			$(foreach _p, $(PWM_FREQS), \
+				$(eval $(call MAKE_OBJ,$(_l),$(_m),$(_d),$(_p)))))))
+
 HEX_TARGETS = $(OBJS:%.OBJ=$(HEX_DIR)/%.hex)
 
 all : $(HEX_TARGETS)
 	@echo "\nbuild finished. built $(shell ls -Aq $(HEX_DIR) | wc -l) hex targets\n"
+
+# Conservative first-power build for the custom EFM8BB21 + FD6288 board.
+omp: $(OMP_TARGET_HEX)
 
 $(OUTPUT_DIR)/%.OMF : $(OUTPUT_DIR)/%.OBJ
 	$(eval MAP := $(OUTPUT_DIR)/$(shell echo $(basename $(notdir $@)).MAP | tr 'a-z' 'A-Z'))
@@ -154,6 +201,7 @@ help:
 	@echo "================================================================"
 	@echo "make all                                 # Build all targets"
 	@echo "make LAYOUT=A MCU=H DEADTIME=5 PWM=24    # Build a single target"
+	@echo "make omp                                 # Build X_H_5_24 for the OMP ESC"
 	@echo
 
 clean:
@@ -162,4 +210,4 @@ clean:
 efm8load: single_target
 	$(EFM8_LOAD_BIN) -p $(EFM8_LOAD_PORT) -b $(EFM8_LOAD_BAUD) -w $(SINGLE_TARGET_HEX)
 
-.PHONY: single_target all changelog help clean efm8load check_commit
+.PHONY: single_target all omp changelog help clean efm8load check_commit

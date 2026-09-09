@@ -115,8 +115,8 @@ ELSEIF ESCNO == V_
     $include (Layouts/V.inc)            ; Select pinout V
 ELSEIF ESCNO == W_
     $include (Layouts/W.inc)            ; Select pinout W
-;ELSEIF ESCNO == X_
-    ;$include (Layouts/X.inc)           ; Select pinout X
+ELSEIF ESCNO == X_
+    $include (Layouts/X.inc)            ; Select custom OMP ESC pinout X
 ;ELSEIF ESCNO == Y_
     ;$include (Layouts/Y.inc)           ; Select pinout Y
 ELSEIF ESCNO == Z_
@@ -263,4 +263,3 @@ Lock_Flash MACRO
     mov  Flash_Key_1, #0
     mov  Flash_Key_2, #0
 ENDM
-
