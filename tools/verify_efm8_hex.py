@@ -10,8 +10,21 @@ from typing import Iterable
 
 
 FLASH_SIZE = 0x4000
-DEFAULT_LAYOUT_TAG = b"#X_H_05#"
+DEFAULT_LAYOUT_TAG = b"#X_H_15#"
 MCU_TAG = b"#BLHELI$EFM8B21#"
+CRITICAL_PATTERNS = (
+    ("P0 gate-output mask", bytes.fromhex("75 A4 8F")),
+    ("P1 gate-output mask", bytes.fromhex("75 A5 01")),
+    ("P2.0/C2D high-impedance mode", bytes.fromhex("75 A6 00")),
+    ("comparator 1 initialization", bytes.fromhex("75 BF 80 75 AB 00")),
+    ("phase A comparator input P1.4/reference P1.3", bytes.fromhex("75 AA 43")),
+    ("phase B comparator input P1.5/reference P1.3", bytes.fromhex("75 AA 53")),
+    ("phase C comparator input P1.6/reference P1.3", bytes.fromhex("75 AA 63")),
+    ("phase A CEX routing", bytes.fromhex("75 D4 FC 75 D5 FF")),
+    ("phase B CEX routing", bytes.fromhex("75 D4 F3 75 D5 FF")),
+    ("phase C CEX routing", bytes.fromhex("75 D4 7F 75 D5 FE")),
+    ("15-step dead-time subtraction", bytes.fromhex("94 0F")),
+)
 
 
 class HexError(ValueError):
@@ -106,6 +119,9 @@ def validate_firmware(memory: dict[int, int], expected_layout_tag: bytes) -> Non
         raise HexError(f"missing MCU tag {MCU_TAG.decode('ascii')!r}")
     if all(value == 0xFF for value in image[:16]):
         raise HexError("reset-vector area is blank")
+    for description, pattern in CRITICAL_PATTERNS:
+        if pattern not in image:
+            raise HexError(f"missing critical target pattern: {description}")
 
 
 def validate_full_backup(memory: dict[int, int]) -> None:
@@ -157,7 +173,7 @@ def main() -> int:
     parser.add_argument(
         "--layout-tag",
         default=DEFAULT_LAYOUT_TAG.decode("ascii"),
-        help="expected Bluejay layout tag (default: #X_H_05#)",
+        help="expected Bluejay layout tag (default: #X_H_15#)",
     )
     parser.add_argument(
         "--compare-programmed",

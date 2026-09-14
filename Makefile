@@ -140,7 +140,7 @@ $(OUTPUT_DIR)/$(1)_$(2)_$(3)_$(4)_$(VERSION).OBJ : $(ASM_SRC) $(ASM_INC)
 endef
 
 SINGLE_TARGET_HEX = $(HEX_DIR)/$(LAYOUT)_$(MCU)_$(DEADTIME)_$(PWM)_$(VERSION).hex
-OMP_TARGET_HEX = $(HEX_DIR)/X_H_5_24_$(VERSION).hex
+OMP_TARGET_HEX = $(HEX_DIR)/X_H_15_24_$(VERSION).hex
 
 single_target : $(SINGLE_TARGET_HEX)
 
@@ -201,7 +201,7 @@ help:
 	@echo "================================================================"
 	@echo "make all                                 # Build all targets"
 	@echo "make LAYOUT=A MCU=H DEADTIME=5 PWM=24    # Build a single target"
-	@echo "make omp                                 # Build X_H_5_24 for the OMP ESC"
+	@echo "make omp                                 # Build X_H_15_24 for the OMP ESC"
 	@echo
 
 clean:

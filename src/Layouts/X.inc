@@ -30,10 +30,10 @@
 ; -----------------------  |  -----------------------  |  -------------------------
 ; Ap Ac Bp Bc __ RX __ Cp  |  Cc __ __ Vn Am Bm Cm __  |  no     no     high   _
 ;
-; Driver channel 1/2/3 is called phase A/B/C in this file. Its pairing with the
-; three physical motor pads must be verified on the actual PCB before power-up.
-; P0.5 is the inherited candidate signal input and also requires PCB confirmation.
-; Vn is a scaled VBUS/2 reference, not necessarily a three-phase star point.
+; Reverse engineering of the verified BLHeli_S 16.7 backup confirms that driver
+; channel 1/2/3 is logical phase A/B/C, P0.5 is the signal input, P1.4/P1.5/P1.6
+; are phase A/B/C feedback, and P1.3 is the common comparator reference.
+; Vn is a scaled VBUS/2 reference, not a three-phase resistor star point.
 ;
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 
@@ -66,7 +66,7 @@ PCA0CPH_DAMP EQU PCA0CPH1
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 C_Pwm EQU 7                            ; FD6288 HIN3
 ;     EQU 6
-RTX_PIN EQU 5                          ; Candidate DShot signal input; verify on PCB
+RTX_PIN EQU 5                          ; Signal input (confirmed from original firmware)
 ;     EQU 4
 B_Com EQU 3                            ; FD6288 LIN2
 B_Pwm EQU 2                            ; FD6288 HIN2
@@ -99,11 +99,12 @@ P1_SKIP EQU 0FFh
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 ; PORT 2 definitions
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
-DebugPin EQU 0
-
-P2_DIGITAL EQU (1 SHL DebugPin)
-P2_PUSHPULL EQU (1 SHL DebugPin)
-P2_SKIP EQU (1 SHL DebugPin)
+; P2.0 is the C2D pin on the QFN20 device. The original firmware leaves it
+; high-impedance. Keep it analog/open-drain here and skip it in the crossbar so
+; a connected C2 adapter never has to fight an otherwise unused push-pull pin.
+P2_DIGITAL EQU 0
+P2_PUSHPULL EQU 0
+P2_SKIP EQU 01h
 
 ;**** **** **** **** **** **** **** **** **** **** **** **** ****
 ; Custom PWM phase routing across P0 and P1
