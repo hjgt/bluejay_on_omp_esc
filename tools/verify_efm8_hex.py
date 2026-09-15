@@ -12,6 +12,11 @@ from typing import Iterable
 FLASH_SIZE = 0x4000
 DEFAULT_LAYOUT_TAG = b"#X_H_15#"
 MCU_TAG = b"#BLHELI$EFM8B21#"
+EEPROM_BASE = 0x1A00
+EXPECTED_FW_REVISION = bytes((0, 21))
+EXPECTED_EEPROM_LAYOUT_REVISION = 208
+NAME_ADDRESS = 0x1A60
+EXPECTED_NAME_PREFIX = b"Bluejay"
 CRITICAL_PATTERNS = (
     ("P0 gate-output mask", bytes.fromhex("75 A4 8F")),
     ("P1 gate-output mask", bytes.fromhex("75 A5 01")),
@@ -119,6 +124,20 @@ def validate_firmware(memory: dict[int, int], expected_layout_tag: bytes) -> Non
         raise HexError(f"missing MCU tag {MCU_TAG.decode('ascii')!r}")
     if all(value == 0xFF for value in image[:16]):
         raise HexError("reset-vector area is blank")
+    if image[EEPROM_BASE : EEPROM_BASE + 2] != EXPECTED_FW_REVISION:
+        actual = image[EEPROM_BASE : EEPROM_BASE + 2]
+        raise HexError(
+            "unexpected Bluejay firmware revision in EEPROM defaults: "
+            f"{actual[0]}.{actual[1]}"
+        )
+    if image[EEPROM_BASE + 2] != EXPECTED_EEPROM_LAYOUT_REVISION:
+        raise HexError(
+            "unexpected EEPROM layout revision: "
+            f"{image[EEPROM_BASE + 2]} (expected {EXPECTED_EEPROM_LAYOUT_REVISION})"
+        )
+    name_prefix = image[NAME_ADDRESS : NAME_ADDRESS + len(EXPECTED_NAME_PREFIX)]
+    if name_prefix != EXPECTED_NAME_PREFIX:
+        raise HexError("firmware name field does not start with 'Bluejay'")
     for description, pattern in CRITICAL_PATTERNS:
         if pattern not in image:
             raise HexError(f"missing critical target pattern: {description}")

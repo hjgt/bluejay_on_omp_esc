@@ -1,7 +1,7 @@
 # EFM8BB21 + FD6288 移植 Bluejay：工程说明、Nano C2 与验收流程
 
 > 适用对象：本项目中的商业闭源电调，MCU 为 **EFM8BB21F16G-QFN20**，三相驱动为 **FD6288**。
-> 文档状态：2026-09-15。源码已迁移到 Bluejay 稳定版 **v0.21.0**；原厂BLHeli_S 16.7双份一致备份的反汇编已确认全部控制引脚、三相顺序、比较器和306ns死区。修正后的 `omp2` 已由有许可的Keil从当前源码连续独立构建两次并通过软件校验，现作为工程测试HEX发布；硬件台架验收尚未完成。
+> 文档状态：2026-09-15。源码已迁移到 Bluejay 稳定版 **v0.21.0**；原厂BLHeli_S 16.7双份一致备份的反汇编已确认全部控制引脚、三相顺序、比较器和306ns死区。修正后的 `omp2` 已由有许可的Keil从当前源码连续独立构建两次并通过软件校验，且已完成首次实机写入、启动和配置链路识别；烧录后的设置迁移注意事项见第6.3节，完整硬件台架验收尚未完成。
 
 ## 0. 先看结论
 
@@ -237,7 +237,7 @@ Bluejay 的 `DEADTIME=0` 是一种特殊单 PWM 路径：阻尼模块关闭，LI
 
 首选做法是在任何 erase/write 前完成两次完整备份。如果芯片有读保护而无法备份，或决定跳过读取，必须先明确接受：第一次整片擦除后，原厂固件将永久丢失且无法由本项目恢复。BLHeliSuite的`Read Setup`只能读取身份和设置，不是完整程序备份。
 
-本项目现状（2026-09-15）：已经通过C2读取完整 `0x0000～0x3FFF`，用户确认第二次独立读取一致。规范镜像SHA-256为 `f4dfe722c0b07da2e552387c5a98b31fa326bd29c115e1b46e6a1bbbbee62291`。镜像未上传仓库；请另存至少两份。
+本项目现状（2026-09-15）：已经通过C2读取完整 `0x0000～0x3FFF`，用户确认第二次独立读取一致。规范镜像现保存在[`firmware/orig.hex`](firmware/orig.hex)，SHA-256为 `f4dfe722c0b07da2e552387c5a98b31fa326bd29c115e1b46e6a1bbbbee62291`；仍应另存至少两份离线副本。
 
 ## 5. 构建工程测试 HEX
 
@@ -361,9 +361,14 @@ python3 tools/verify_efm8_hex.py \
 3. 选择Nano的COM口，点击 `Connect`，再点 `Read Setup`。
 4. 原厂闭源固件可能显示Unknown，或弹出建议刷入已知BLHeli固件。此时先取消，不要接受自动匹配。
 5. 确认原厂备份哈希和第4节门槛，再点击 `Flash Other`，手动选择仓库[`firmware/X_H_15_24_v0.21.0-omp2.hex`](firmware/X_H_15_24_v0.21.0-omp2.hex)或Release中的同名HEX。不要选择BLHeliSuite自动推荐的其他布局。
-6. 刷完重新连接并执行 `Read Setup`。若软件仍不认识私有布局X，不要点击自动修复或自动升级；配置器识别能力不能证明电气布局正确。
+6. 烧录结束后若询问 `Do you want to write current settings to ESC?`，选择 **No/否**。这不是确认是否写入固件，而是询问是否把烧录前缓存的设置覆盖到新固件上。
+7. 完全断电重启，再重新连接并执行 `Read Setup`。若软件仍不认识私有布局X，不要点击自动修复或自动升级；配置器识别能力不能证明电气布局正确。
 
 `Read Setup`读取的是固件身份和设置，不应当作原厂16KiB程序备份。
+
+[Bluejay v0.21源码](https://github.com/bird-sanctuary/bluejay/blob/v0.21.0/src/Bluejay.asm)规定设置布局版本为`208`，固件名称为`Bluejay (.0)`；当前[ESC Configurator的Bluejay设置定义](https://github.com/stylesuxx/esc-configurator/blob/main/src/sources/Bluejay/settings.js)也包含208。本次实测在上述询问选择Yes后，网页显示 `X-H-15 - BLHeli_S, 0.21`并报告“布局版本208尚不支持”。这与旧BLHeli_S设置块覆盖Bluejay名称和参数的结果高度一致：网页因名称不再是Bluejay而选用了BLHeli_S解析器，随后自然无法解析只属于Bluejay的208版本。`208`本身正确，不得改成BLHeli_S的`33`。
+
+如果已经选择Yes，不代表程序区损坏；使用同一个、哈希正确的HEX再次执行`Flash Other`，这次选择No并完全断电重启。预期网页身份应包含 `Bluejay`、`0.21.0`、`X-H-15`和24kHz。网页只用于修复后的身份核对或设置，不要用其自动刷写官方同名布局；若已经正确显示Bluejay却仍提示不支持208，再更新网页或清除旧缓存。
 
 只使用BLHeliSuite的独立图文式步骤清单见[`docs/BLHELISUITE_FLASHING_zh-CN.md`](docs/BLHELISUITE_FLASHING_zh-CN.md)。
 
@@ -382,7 +387,7 @@ X_H_15_24_v0.21.0-omp2.hex
 SHA-256: f4f6096085b4cd31fa7f97703450dfbb45f2a3b0e19cfdaa589efc82655131e4
 ```
 
-烧录只使用第6.3节的 `Flash Other`。BLHeliSuite必须明确报告写入完成；随后完全断电重上电，重新连接并执行`Read Setup`。这能确认通讯和设置读取恢复，但不是完整Flash逐字节比较，因此“未做完整回读比较”仍作为剩余风险记录。
+烧录只使用第6.3节的 `Flash Other`。BLHeliSuite必须明确报告写入完成，并在“写回当前设置”的询问中选择No；随后完全断电重上电，重新连接并执行`Read Setup`。这能确认通讯和设置读取恢复，但不是完整Flash逐字节比较，因此“未做完整回读比较”仍作为剩余风险记录。
 
 ## 7. 第一次上电与示波器验收
 
@@ -424,7 +429,8 @@ SHA-256: f4f6096085b4cd31fa7f97703450dfbb45f2a3b0e19cfdaa589efc82655131e4
 - [x] 原厂16KiB双份备份完成且一致；
 - [x] 修正后的`omp2`由有许可的Keil从当前源码连续构建两次，且实际编程字节与候选逐字节一致；
 - [x] 工程测试Release HEX通过地址、标签、校验和及关键机器码检查；
-- [ ] BLHeliSuite写入成功，断电重上电后仍可执行`Read Setup`；未做完整Flash回读比较列为剩余风险；
+- [x] 已完成首次BLHeliSuite实机写入、启动及网页身份读取；
+- [ ] 使用同一HEX重刷并在“写回当前设置”询问中选择No，断电重上电后身份显示为Bluejay；未做完整Flash回读比较列为剩余风险；
 - [ ] 三个桥臂的HIN/LIN、HO/LO或Vgs均无重叠；
 - [ ] 限流低速、启动、加减速和温升测试通过；
 - [ ] 实际电池电压、全转速和目标负载范围验证通过。
