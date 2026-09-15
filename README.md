@@ -14,9 +14,11 @@ three-phase gate driver. Reverse engineering of two matching reads of the
 original BLHeli_S 16.7 firmware confirms the signal, gate, comparator and phase
 mapping. The intended conservative first-test target is
 `X_H_15_24_v0.21.0-omp2.hex` (`DEADTIME=15`, about 306 ns, and 24 kHz PWM).
-The source and verifier are updated, but no flashable `omp2` release is published
-until a fresh licensed-Keil build reproduces the locally patched candidate byte
-for byte.
+The `omp2` target has been rebuilt twice from the current source with a licensed
+Keil PK51 toolchain. Both builds are identical, pass the project verifier, and
+produce the same programmed bytes as the earlier independently patched candidate.
+The published HEX is still an engineering-test image until the electrical bench
+checks in the porting guide pass.
 
 - [Chinese porting, Arduino Nano C2 backup/flashing, and validation guide](OMP_ESC_PORTING_GUIDE_zh-CN.md)
 - [Original-firmware reverse-engineering report](docs/ORIGINAL_FIRMWARE_REVERSE_ENGINEERING_zh-CN.md)
