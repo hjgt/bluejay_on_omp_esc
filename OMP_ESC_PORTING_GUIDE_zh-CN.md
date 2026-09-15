@@ -235,7 +235,7 @@ Bluejay 的 `DEADTIME=0` 是一种特殊单 PWM 路径：阻尼模块关闭，LI
 
 ### 4.4 原厂16KiB备份
 
-首选做法是在任何 erase/write 前完成第6节的两次完整备份。如果芯片有读保护而无法备份，或决定跳过读取，必须先明确接受：第一次整片擦除后，原厂固件将永久丢失且无法由本项目恢复。
+首选做法是在任何 erase/write 前完成两次完整备份。如果芯片有读保护而无法备份，或决定跳过读取，必须先明确接受：第一次整片擦除后，原厂固件将永久丢失且无法由本项目恢复。BLHeliSuite的`Read Setup`只能读取身份和设置，不是完整程序备份。
 
 本项目现状（2026-09-15）：已经通过C2读取完整 `0x0000～0x3FFF`，用户确认第二次独立读取一致。规范镜像SHA-256为 `f4dfe722c0b07da2e552387c5a98b31fa326bd29c115e1b46e6a1bbbbee62291`。镜像未上传仓库；请另存至少两份。
 
@@ -317,21 +317,15 @@ python3 tools/verify_efm8_hex.py \
 
 配置器看到 `#X_H_15#` 只证明镜像身份，**不能证明电气连接正确**。不要使用在线配置器给这个私有X布局执行“自动刷最新版”；应保存并手动使用本项目生成的HEX。
 
-## 6. Arduino Nano 的三种C2烧录方法
+## 6. 使用BLHeliSuite和Arduino Nano烧录
 
 > **工程测试警告：** `omp2`已完成有许可Keil源码重建和软件校验，但尚未完成真实电调的门极波形、限流低速和温升验收。只有在接受可能擦除原厂固件和损坏电调风险、完成第4节门槛并具备限流与快速断电条件时，才进入写入和第7节台架验证；它还不是量产或飞行固件。
 
-### 6.1 先选路线
+### 6.1 工具范围
 
-`tools/efm8load.py` 是UART bootloader客户端，不是C2客户端。经典ATmega328P/16MHz Nano或复刻版可以变成C2烧录桥；CH340/CH341只影响电脑串口，不改变D2/D3功能。Nano Every、Nano 33、ESP32版Nano、LGT8F328P或8MHz板不能直接套用。
+后续烧录与读取操作统一使用8位版 **BLHeliSuite 16.7 + Arduino Nano 4-way C2** 这一种GUI方法。经典ATmega328P/16MHz Nano及其CH340/CH341复刻版可以作为C2桥；Nano Every、Nano 33、ESP32版Nano、LGT8F328P或8MHz板不能直接套用。
 
-| 方法 | 给Nano安装接口 | 图形界面 | 原厂完整16KiB备份 | 适合用途 |
-|---|---|---|---|---|
-| 浏览器版C2 Flasher | 网页自动完成 | 有 | 不适合 | 最省事地识别、擦除和写入 |
-| BLHeliSuite 4-way C2 | BLHeliSuite的Make Interfaces | 有 | `Read Setup`不等于完整固件备份 | Windows下传统GUI烧录 |
-| Arduino C2 + Python | PlatformIO或整理后用Arduino IDE | 无 | 可读取 `0x0000～0x3FFF` | 最可审计的备份和写后回读 |
-
-这三种方法写入时都会涉及整片擦除，不能绕过EFM8BB2读保护，也不是Keil式的断点/单步仿真器。三种Nano固件互不兼容：换方法时通常需要重新给Nano烧接口程序。
+这种方法写入时会涉及整片擦除，不能绕过EFM8BB2读保护，也不是Keil式的断点/单步仿真器。`Read Setup`不等于完整16KiB固件备份。
 
 ### 6.2 共用接线和供电
 
@@ -349,30 +343,7 @@ python3 tools/verify_efm8_hex.py \
 - 拆下电机和桨；电调从电池输入端供电时使用限流电源，并从板子允许的最低母线电压开始。
 - 给Nano安装任何接口固件时，先断开电调，只连接Nano的USB。
 
-### 6.3 方法A：浏览器版 Arduino C2 Flasher
-
-这是步骤最少的方案，不需要BLHeliSuite、PlatformIO或Arduino IDE。使用支持Web Serial的桌面版Chrome或Edge打开：
-
-<https://stylesuxx.github.io/arduino-c2-flasher/>
-
-操作顺序：
-
-1. 先只插Nano的USB，点击 `Connect to Arduino`，在浏览器弹窗中选择Nano的串口。
-2. 第一次会提示没有检测到C2接口；选择 `Arduino Nano`，让网页自动把接口固件写入Nano。网页会依次尝试新引导程序的115200和老引导程序的57600波特率。
-3. 断电后按第6.2节连接D2、D3和GND，再用限流电源给电调正常供电。
-4. 再次点击 `Connect to Arduino` 并选择Nano串口。成功时应显示接口已检测到以及MCU设备信息；EFM8BB2的设备ID应为 `0x32`。
-5. 正式Release发布后，进入 `Write` 页，把该Release中的 `X_H_15_24_v0.21.0-omp2.hex` 拖入文件框，或点击文件框选择该HEX。
-6. 确认第4节其他门槛已经完成后才开始；网页在写入前会先整片擦除。完成后断开并给电调重新上电。
-
-浏览器版有三个重要限制：
-
-- 当前源码的 `Read MCU` 只读取 `0x0000～0x37FF`，不是BB21完整的 `0x0000～0x3FFF`；页面也没有把结果直接保存为标准完整备份HEX的流程。
-- `Write` 内部会先执行Device Erase；不要把拖入文件框理解为无损检查。
-- 显示 `Data has been written` 代表命令完成，但不等于本项目校验器所做的完整逐字节回读比较。
-
-因此它适合已有可靠原厂备份、希望用GUI完成首次烧录的情况；若要严格验证写入后的Flash，使用方法C。
-
-### 6.4 方法B：BLHeliSuite 的 Arduino 4-way C2
+### 6.3 制作接口、读取和烧录
 
 使用8位版 **BLHeliSuite 16.7**，不要使用BLHeliSuite32。Windows最省事；macOS虽可经Wine运行，但CH340串口到Wine的COM映射更容易出问题。
 
@@ -389,73 +360,29 @@ python3 tools/verify_efm8_hex.py \
 2. 从 `Select ATMEL / SILABS Interface` 选择 `B SILABS C2 (4way-if)`。
 3. 选择Nano的COM口，点击 `Connect`，再点 `Read Setup`。
 4. 原厂闭源固件可能显示Unknown，或弹出建议刷入已知BLHeli固件。此时先取消，不要接受自动匹配。
-5. 正式Release发布后，确认原厂备份哈希和第4节门槛，再点击 `Flash Other`，手动选择该Release中的 `X_H_15_24_v0.21.0-omp2.hex`。
+5. 确认原厂备份哈希和第4节门槛，再点击 `Flash Other`，手动选择仓库[`firmware/X_H_15_24_v0.21.0-omp2.hex`](firmware/X_H_15_24_v0.21.0-omp2.hex)或Release中的同名HEX。不要选择BLHeliSuite自动推荐的其他布局。
 6. 刷完重新连接并执行 `Read Setup`。若软件仍不认识私有布局X，不要点击自动修复或自动升级；配置器识别能力不能证明电气布局正确。
 
-`Read Setup`读取的是固件身份和设置，不应当作原厂16KiB程序备份。BLHeliSuite中的4-way接口固件与方法A/C的接口不同；切换回其他方法时需要重刷Nano。
+`Read Setup`读取的是固件身份和设置，不应当作原厂16KiB程序备份。
 
-### 6.5 方法C：Arduino C2接口加Python
+只使用BLHeliSuite的独立图文式步骤清单见[`docs/BLHELISUITE_FLASHING_zh-CN.md`](docs/BLHELISUITE_FLASHING_zh-CN.md)。
 
-这是备份和写后回读最严谨的方法。取得 [bird-sanctuary/arduino-c2-interface](https://github.com/bird-sanctuary/arduino-c2-interface)：
-
-```bash
-git clone https://github.com/bird-sanctuary/arduino-c2-interface.git
-cd arduino-c2-interface
-```
-
-原工程使用PlatformIO；经典Nano使用 `nanoatmega328`，新引导程序使用 `nanoatmega328new`。也可以把主CPP、`C2.cpp/.h`和`Dshot.cpp/.h`整理到同一Arduino IDE工程目录后上传。无论用哪种IDE，此固件进入C2模式都要求 **D13在Nano复位前接到Nano GND**。
-
-电脑端只依赖 `pyserial`：
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate       # Windows PowerShell使用：.venv\Scripts\Activate.ps1
-python -m pip install pyserial
-python client/efm8.py info /dev/cu.wchusbserialXXXX
-```
-
-macOS可用 `ls /dev/cu.*` 查串口，Windows使用 `COM3` 一类名称。看到 `Connected to interface` 和设备/版本号才说明连接成功。
-
-如需备份，连续读取两次并校验完整 `0x0000～0x3FFF`：
-
-```bash
-python client/efm8.py read PORT original_1.hex
-python client/efm8.py read PORT original_2.hex
-python /path/to/bluejay/tools/verify_efm8_hex.py original_1.hex --full-backup
-python /path/to/bluejay/tools/verify_efm8_hex.py original_2.hex --full-backup
-cmp original_1.hex original_2.hex
-shasum -a 256 original_1.hex original_2.hex
-```
-
-读取失败、缺地址、全FF/全00或两份不同，可能是接触、供电、串口或读保护。该客户端只备份16KiB用户程序区，不读取BB2高地址独立非易失数据区，所以也不能称为“整颗芯片逐地址镜像”。
-
-### 6.6 当前项目的原厂备份决定与读保护
+### 6.4 当前项目的原厂备份决定与读保护
 
 EFM8BB2支持代码锁和数据区锁。被锁页面经C2只能整片Device Erase，不能读取、单字节写入或单页擦除；整片擦除会清除锁，同时永久销毁原厂内容，Arduino和BLHeliSuite都不能绕过。
 
 本项目已经成功读取完整主Flash且两次结果一致，说明用户程序区没有阻止本次读取的保护。仍应保存规范镜像及其SHA-256；第一次点击 `Write`、`Erase MCU`、`Flash Other`或接受任何重刷提示，会擦除板上原厂内容，之后只能依靠备份恢复。
 
-### 6.7 写入文件和写后验证
+### 6.5 写入文件和写后确认
 
-无论使用哪种方法，都只选择本项目工程测试Release中的以下文件，并核对SHA-256：
+使用BLHeliSuite时，只选择本项目工程测试Release中的以下文件，并核对SHA-256：
 
 ```text
 X_H_15_24_v0.21.0-omp2.hex
 SHA-256: f4f6096085b4cd31fa7f97703450dfbb45f2a3b0e19cfdaa589efc82655131e4
 ```
 
-方法C的写入和严格回读命令为：
-
-```bash
-python3 tools/verify_efm8_hex.py build/hex/X_H_15_24_v0.21.0-omp2.hex
-python /path/to/arduino-c2-interface/client/efm8.py write PORT \
-  build/hex/X_H_15_24_v0.21.0-omp2.hex
-python /path/to/arduino-c2-interface/client/efm8.py read PORT flashed_readback.hex
-python3 tools/verify_efm8_hex.py flashed_readback.hex --full-backup \
-  --compare-programmed build/hex/X_H_15_24_v0.21.0-omp2.hex
-```
-
-只有出现 `Programmed-byte comparison: OK` 才是严格的逐字节验证。若选择GUI路线而不做Python回读，至少要求工具明确报告写入成功、断电重上电后仍能重新识别MCU，并把“未做完整回读比较”记录为剩余风险。
+烧录只使用第6.3节的 `Flash Other`。BLHeliSuite必须明确报告写入完成；随后完全断电重上电，重新连接并执行`Read Setup`。这能确认通讯和设置读取恢复，但不是完整Flash逐字节比较，因此“未做完整回读比较”仍作为剩余风险记录。
 
 ## 7. 第一次上电与示波器验收
 
@@ -497,7 +424,7 @@ python3 tools/verify_efm8_hex.py flashed_readback.hex --full-backup \
 - [x] 原厂16KiB双份备份完成且一致；
 - [x] 修正后的`omp2`由有许可的Keil从当前源码连续构建两次，且实际编程字节与候选逐字节一致；
 - [x] 工程测试Release HEX通过地址、标签、校验和及关键机器码检查；
-- [ ] C2刷写后逐字节回读一致；
+- [ ] BLHeliSuite写入成功，断电重上电后仍可执行`Read Setup`；未做完整Flash回读比较列为剩余风险；
 - [ ] 三个桥臂的HIN/LIN、HO/LO或Vgs均无重叠；
 - [ ] 限流低速、启动、加减速和温升测试通过；
 - [ ] 实际电池电压、全转速和目标负载范围验证通过。
@@ -512,10 +439,6 @@ python3 tools/verify_efm8_hex.py flashed_readback.hex --full-backup \
 - [EFM8BB2参考手册](https://www.silabs.com/documents/public/reference-manuals/efm8bb2-rm.pdf)
 - [EFM8BB2数据手册](https://www.silabs.com/documents/public/data-sheets/efm8bb2-datasheet.pdf)
 - [Silicon Labs AN127：C2接口](https://www.silabs.com/documents/public/application-notes/AN127.pdf)
-- [Arduino C2接口及客户端](https://github.com/bird-sanctuary/arduino-c2-interface)
-- [浏览器版Arduino C2 Flasher](https://stylesuxx.github.io/arduino-c2-flasher/)
-- [浏览器版C2 Flasher源码](https://github.com/stylesuxx/arduino-c2-flasher)
 - [BLHeli源码仓库与BLHeliSuite下载说明](https://github.com/bitdump/BLHeli)
 - [BLHeliSuite Arduino Nano C2操作参考](https://oscarliang.com/flash-blheli-c2-interface/)
-- [PlatformIO经典Nano（新引导程序）板卡说明](https://docs.platformio.org/en/latest/boards/atmelavr/nanoatmega328new.html)
 - [Keil评估版限制](https://www2.keil.com/limits)

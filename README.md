@@ -20,8 +20,10 @@ produce the same programmed bytes as the earlier independently patched candidate
 The published HEX is still an engineering-test image until the electrical bench
 checks in the porting guide pass.
 
-- [Chinese porting, Arduino Nano C2 backup/flashing, and validation guide](OMP_ESC_PORTING_GUIDE_zh-CN.md)
+- [Chinese porting, BLHeliSuite flashing, and validation guide](OMP_ESC_PORTING_GUIDE_zh-CN.md)
+- [BLHeliSuite + Arduino Nano flashing guide (Chinese)](docs/BLHELISUITE_FLASHING_zh-CN.md)
 - [Original-firmware reverse-engineering report](docs/ORIGINAL_FIRMWARE_REVERSE_ENGINEERING_zh-CN.md)
+- [Compiled engineering-test HEX](firmware/X_H_15_24_v0.21.0-omp2.hex) — SHA-256: `f4f6096085b4cd31fa7f97703450dfbb45f2a3b0e19cfdaa589efc82655131e4`
 - Build: `make omp VERSION=v0.21.0-omp2`
 - Verify: `python3 tools/verify_efm8_hex.py build/hex/X_H_15_24_v0.21.0-omp2.hex`
 
