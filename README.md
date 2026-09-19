@@ -20,6 +20,10 @@ produce the same programmed bytes as the earlier independently patched candidate
 The published HEX is still an engineering-test image until the electrical bench
 checks in the porting guide pass.
 
+> **Release selection:** use only the [`final` release](https://github.com/hjgt/bluejay_on_omp_esc/releases/tag/final)
+> and its `X_H_15_24_v0.21.0-omp2.hex` asset. The older `omp1` / `X_H_5_24`
+> build is obsolete and must not be flashed.
+
 - [Chinese porting, BLHeliSuite flashing, and validation guide](OMP_ESC_PORTING_GUIDE_zh-CN.md)
 - [BLHeliSuite + Arduino Nano flashing guide (Chinese)](docs/BLHELISUITE_FLASHING_zh-CN.md)
 - [Original-firmware reverse-engineering report](docs/ORIGINAL_FIRMWARE_REVERSE_ENGINEERING_zh-CN.md)

@@ -7,6 +7,7 @@
 
 - 使用维护中的 [bird-sanctuary/bluejay](https://github.com/bird-sanctuary/bluejay)；基线固定为 [v0.21.0](https://github.com/bird-sanctuary/bluejay/releases/tag/v0.21.0)，提交 `93bf3e1a081ee87357aface06e535480dcc191d8`。
 - `v0.21.1-RC1` 是预发布版，不用于第一次上电。
+- 本项目只使用[`final` Release](https://github.com/hjgt/bluejay_on_omp_esc/releases/tag/final)中的 `X_H_15_24_v0.21.0-omp2.hex`；旧 `omp1` / `X_H_5_24` 已废弃，不得烧录。
 - 常见的ATmega328P/16MHz国产经典Nano可以作为C2读写桥；它能在无读保护时备份16KiB用户程序Flash，但不提供源码级单步仿真，也不能绕过芯片读保护。
 - 自定义布局为 **X**，MCU 类型为 **H**；首个台架目标为 `X_H_15_24`。
 - FD6288 与 Bluejay 的 `DEADTIME=0` 模式不兼容。代码和 Makefile 已同时禁止 X 布局使用零死区。

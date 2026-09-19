@@ -12,7 +12,7 @@
 - 固件：[X_H_15_24_v0.21.0-omp2.hex](../firmware/X_H_15_24_v0.21.0-omp2.hex)
 - SHA-256：`f4f6096085b4cd31fa7f97703450dfbb45f2a3b0e19cfdaa589efc82655131e4`
 
-该文件由已许可的Keil PK51 V9.59从当前源码连续构建两次，两次结果一致，并通过地址、标签、Intel HEX校验和及关键机器码检查。它也作为附件发布在[GitHub工程测试Release](https://github.com/hjgt/bluejay_on_omp_esc/releases/tag/v0.21.0-omp2)。
+该文件由已许可的Keil PK51 V9.59从当前源码连续构建两次，两次结果一致，并通过地址、标签、Intel HEX校验和及关键机器码检查。它也作为附件发布在[GitHub `final` Release](https://github.com/hjgt/bluejay_on_omp_esc/releases/tag/final)。旧 `omp1` / `X_H_5_24` 已废弃，不得烧录。
 
 Windows校验命令可使用：
 
